@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prediksi Cuaca - Perbandingan Metode Adams</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(
+          135deg,
+          #74b9ff 0%,
+          #0984e3 50%,
+          #6c5ce7 100%
+        );
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1600px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+        backdrop-filter: blur(15px);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #00b894, #00cec9);
+        color: white;
+        padding: 30px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .header::before {
+        content: "🌤️";
+        position: absolute;
+        top: 20px;
+        right: 30px;
+        font-size: 3em;
+        opacity: 0.3;
+      }
+
+      .header h1 {
+        font-size: 2.8em;
+        margin-bottom: 10px;
+        font-weight: 700;
+      }
+
+      .header p {
+        font-size: 1.2em;
+        opacity: 0.9;
+      }
+
+      .main-content {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        gap: 30px;
+        padding: 30px;
+      }
+
+      .input-section {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        height: fit-content;
+      }
+
+      .input-section h2 {
+        color: #00b894;
+        margin-bottom: 20px;
+        font-size: 1.6em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .weather-tabs {
+        display: flex;
+        margin-bottom: 25px;
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 5px;
+      }
+
+      .tab-btn {
+        flex: 1;
+        padding: 12px;
+        border: none;
+        background: transparent;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 600;
+        font-size: 12px;
+      }
+
+      .tab-btn.active {
+        background: #00b894;
+        color: white;
+        box-shadow: 0 4px 12px rgba(0, 184, 148, 0.3);
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #2d3436;
+        font-size: 14px;
+      }
+
+      .form-group input,
+      .form-group select {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+      }
+
+      .form-group input:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: #00b894;
+        box-shadow: 0 0 0 3px rgba(0, 184, 148, 0.1);
+      }
+
+      .input-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+      }
+
+      .btn {
+        background: linear-gradient(135deg, #00b894, #00cec9);
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        width: 100%;
+        margin-top: 15px;
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 25px rgba(0, 184, 148, 0.3);
+      }
+
+      .results-section {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      }
+
+      .results-section h2 {
+        color: #00b894;
+        margin-bottom: 20px;
+        font-size: 1.6em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .charts-container {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 30px;
+        margin-bottom: 25px;
+      }
+
+      .chart-wrapper {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+      }
+
+      .chart-wrapper h3 {
+        color: #2d3436;
+        margin-bottom: 15px;
+        text-align: center;
+        font-size: 1.3em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .chart-container {
+        position: relative;
+        height: 400px;
+        margin-bottom: 15px;
+      }
+
+      .method-legend {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+        margin-top: 15px;
+        padding: 15px;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .legend-color {
+        width: 20px;
+        height: 3px;
+        border-radius: 2px;
+      }
+
+      .weather-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+      }
+
+      .stat-card {
+        background: linear-gradient(135deg, #74b9ff, #0984e3);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 8px 20px rgba(116, 185, 255, 0.3);
+      }
+
+      .stat-card h3 {
+        font-size: 1.8em;
+        margin-bottom: 5px;
+        font-weight: 700;
+      }
+
+      .stat-card p {
+        opacity: 0.9;
+        font-weight: 500;
+        font-size: 0.9em;
+      }
+
+      .weather-info {
+        background: linear-gradient(135deg, #fd79a8, #e84393);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        margin: 20px 0;
+      }
+
+      .forecast-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .forecast-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .forecast-card .day {
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      .forecast-card .temp {
+        font-size: 1.4em;
+        font-weight: 700;
+      }
+
+      .forecast-card .desc {
+        font-size: 0.9em;
+        opacity: 0.8;
+        margin-top: 5px;
+      }
+
+      .loading {
+        display: none;
+        text-align: center;
+        padding: 30px;
+      }
+
+      .loading.show {
+        display: block;
+      }
+
+      .spinner {
+        border: 4px solid rgba(0, 184, 148, 0.3);
+        border-top: 4px solid #00b894;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .accuracy-comparison {
+        background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        margin: 20px 0;
+      }
+
+      .accuracy-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+      }
+
+      .accuracy-item {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+      }
+
+      .accuracy-item h4 {
+        font-size: 1.1em;
+        margin-bottom: 8px;
+      }
+
+      .accuracy-item .value {
+        font-size: 1.4em;
+        font-weight: 700;
+      }
+
+      @media (max-width: 1200px) {
+        .main-content {
+          grid-template-columns: 1fr;
+        }
+
+        .header h1 {
+          font-size: 2.2em;
+        }
+
+        .input-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🌦️ Perbandingan Metode Adams</h1>
+        <p>
+          Sistem Prediksi Meteorologi - Adams-Bashforth vs Adams-Moulton (Orde 2
+          & 4)
+        </p>
+      </div>
+
+      <div class="main-content">
+        <div class="input-section">
+          <h2>⚙️ Parameter Meteorologi</h2>
+
+          <div class="weather-tabs">
+            <button class="tab-btn active" onclick="switchTab('temperature')">
+              🌡️ Suhu
+            </button>
+            <button class="tab-btn" onclick="switchTab('humidity')">
+              💧 Kelembaban
+            </button>
+            <button class="tab-btn" onclick="switchTab('pressure')">
+              🌀 Tekanan
+            </button>
+          </div>
+
+          <div id="temperature-tab" class="tab-content">
+            <div class="input-grid">
+              <div class="form-group">
+                <label for="temp-initial">Suhu Awal (°C):</label>
+                <input type="number" id="temp-initial" value="28" step="0.1" />
+              </div>
+              <div class="form-group">
+                <label for="temp-trend">Tren Harian (°C/jam):</label>
+                <input type="number" id="temp-trend" value="-0.5" step="0.1" />
+              </div>
+            </div>
+          </div>
+
+          <div id="humidity-tab" class="tab-content" style="display: none">
+            <div class="input-grid">
+              <div class="form-group">
+                <label for="humid-initial">Kelembaban Awal (%):</label>
+                <input
+                  type="number"
+                  id="humid-initial"
+                  value="75"
+                  min="0"
+                  max="100"
+                />
+              </div>
+              <div class="form-group">
+                <label for="humid-variation">Variasi (%/jam):</label>
+                <input
+                  type="number"
+                  id="humid-variation"
+                  value="2"
+                  step="0.1"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div id="pressure-tab" class="tab-content" style="display: none">
+            <div class="input-grid">
+              <div class="form-group">
+                <label for="pressure-initial">Tekanan Awal (hPa):</label>
+                <input
+                  type="number"
+                  id="pressure-initial"
+                  value="1013.25"
+                  step="0.01"
+                />
+              </div>
+              <div class="form-group">
+                <label for="pressure-change">Perubahan (hPa/jam):</label>
+                <input
+                  type="number"
+                  id="pressure-change"
+                  value="-0.2"
+                  step="0.01"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="location">Lokasi:</label>
+            <select id="location" onchange="updateLocationDefaults()">
+              <option value="jakarta">Jakarta (Tropis)</option>
+              <option value="bandung">Bandung (Pegunungan)</option>
+              <option value="surabaya">Surabaya (Pesisir)</option>
+              <option value="medan">Medan (Ekuatorial)</option>
+              <option value="makassar">Makassar (Monsun)</option>
+            </select>
+          </div>
+
+          <div class="input-grid">
+            <div class="form-group">
+              <label for="time-step">Interval Waktu (jam):</label>
+              <input
+                type="number"
+                id="time-step"
+                value="1"
+                min="0.5"
+                max="6"
+                step="0.5"
+              />
+            </div>
+            <div class="form-group">
+              <label for="forecast-hours">Durasi Prediksi (jam):</label>
+              <input
+                type="number"
+                id="forecast-hours"
+                value="72"
+                min="12"
+                max="168"
+              />
+            </div>
+          </div>
+
+          <button class="btn" onclick="runWeatherPrediction()">
+            🚀 Mulai Analisis Perbandingan
+          </button>
+
+          <div class="weather-info">
+            <h4>📊 Info Metode:</h4>
+            <p>
+              <strong>Adams-Bashforth:</strong> Metode eksplisit dengan
+              perhitungan langsung
+            </p>
+            <p>
+              <strong>Adams-Moulton:</strong> Metode implisit dengan koreksi
+              untuk akurasi tinggi
+            </p>
+            <p>
+              <strong>Orde 2 vs 4:</strong> Orde lebih tinggi = akurasi lebih
+              baik
+            </p>
+          </div>
+        </div>
+
+        <div class="results-section">
+          <h2>📈 Hasil Perbandingan Metode</h2>
+
+          <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Memproses perbandingan metode numerik...</p>
+          </div>
+
+          <div class="charts-container">
+            <div class="chart-wrapper">
+              <h3>📊 Perbandingan Metode Orde 2</h3>
+              <div class="chart-container">
+                <canvas id="weatherChart2"></canvas>
+              </div>
+              <div class="method-legend" id="legend2">
+                <!-- Legend will be populated by JavaScript -->
+              </div>
+            </div>
+
+            <div class="chart-wrapper">
+              <h3>📈 Perbandingan Metode Orde 4</h3>
+              <div class="chart-container">
+                <canvas id="weatherChart4"></canvas>
+              </div>
+              <div class="method-legend" id="legend4">
+                <!-- Legend will be populated by JavaScript -->
+              </div>
+            </div>
+          </div>
+
+          <div class="accuracy-comparison">
+            <h4>🎯 Analisis Akurasi Metode:</h4>
+            <div class="accuracy-grid" id="accuracyGrid">
+              <!-- Accuracy comparison will be populated here -->
+            </div>
+          </div>
+
+          <div class="weather-stats">
+            <div class="stat-card">
+              <h3 id="currentValue">-</h3>
+              <p>Nilai Prediksi Terkini</p>
+            </div>
+            <div class="stat-card">
+              <h3 id="maxValue">-</h3>
+              <p>Nilai Maksimum</p>
+            </div>
+            <div class="stat-card">
+              <h3 id="minValue">-</h3>
+              <p>Nilai Minimum</p>
+            </div>
+            <div class="stat-card">
+              <h3 id="bestMethod">-</h3>
+              <p>Metode Terbaik</p>
+            </div>
+          </div>
+
+          <div class="weather-info">
+            <h4>🗓️ Prediksi 5 Hari Kedepan (Metode Terbaik):</h4>
+            <div class="forecast-grid" id="forecastGrid">
+              <!-- Forecast cards will be generated here -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let chart2 = null;
+      let chart4 = null;
+      let currentTab = "temperature";
+
+      // Data lokasi dengan karakteristik iklim
+      const locationData = {
+        jakarta: {
+          tempBase: 28,
+          humidBase: 75,
+          pressureBase: 1013.25,
+          factor: 1.0,
+        },
+        bandung: {
+          tempBase: 24,
+          humidBase: 80,
+          pressureBase: 1015.5,
+          factor: 0.8,
+        },
+        surabaya: {
+          tempBase: 30,
+          humidBase: 78,
+          pressureBase: 1012.8,
+          factor: 1.1,
+        },
+        medan: {
+          tempBase: 27,
+          humidBase: 85,
+          pressureBase: 1013.0,
+          factor: 1.2,
+        },
+        makassar: {
+          tempBase: 29,
+          humidBase: 72,
+          pressureBase: 1012.5,
+          factor: 0.9,
+        },
+      };
+
+      // Warna untuk setiap metode
+      const methodColors = {
+        ab2: {
+          color: "rgb(255, 99, 132)",
+          bg: "rgba(255, 99, 132, 0.1)",
+          name: "Adams-Bashforth Orde 2",
+        },
+        am2: {
+          color: "rgb(54, 162, 235)",
+          bg: "rgba(54, 162, 235, 0.1)",
+          name: "Adams-Moulton Orde 2",
+        },
+        ab4: {
+          color: "rgb(255, 159, 64)",
+          bg: "rgba(255, 159, 64, 0.1)",
+          name: "Adams-Bashforth Orde 4",
+        },
+        am4: {
+          color: "rgb(153, 102, 255)",
+          bg: "rgba(153, 102, 255, 0.1)",
+          name: "Adams-Moulton Orde 4",
+        },
+      };
+
+      function switchTab(tab) {
+        // Update tab buttons
+        document
+          .querySelectorAll(".tab-btn")
+          .forEach((btn) => btn.classList.remove("active"));
+        event.target.classList.add("active");
+
+        // Update tab content
+        document.querySelectorAll(".tab-content").forEach((content) => {
+          content.style.display = "none";
+        });
+        document.getElementById(tab + "-tab").style.display = "block";
+
+        currentTab = tab;
+
+        // Update initial values based on location
+        updateLocationDefaults();
+      }
+
+      function updateLocationDefaults() {
+        const location = document.getElementById("location").value;
+        const data = locationData[location];
+
+        if (currentTab === "temperature") {
+          document.getElementById("temp-initial").value = data.tempBase;
+        } else if (currentTab === "humidity") {
+          document.getElementById("humid-initial").value = data.humidBase;
+        } else if (currentTab === "pressure") {
+          document.getElementById("pressure-initial").value = data.pressureBase;
+        }
+      }
+
+      // Weather-specific differential equations
+      function getWeatherEquation(type, location) {
+        const factor = locationData[location].factor;
+
+        switch (type) {
+          case "temperature":
+            return (t, T) => {
+              const dailyCycle = Math.sin((2 * Math.PI * t) / 24) * factor;
+              const trend = parseFloat(
+                document.getElementById("temp-trend").value
+              );
+              return trend + dailyCycle * 3;
+            };
+
+          case "humidity":
+            return (t, H) => {
+              const variation = parseFloat(
+                document.getElementById("humid-variation").value
+              );
+              const dailyPattern = Math.cos((2 * Math.PI * t) / 24) * factor;
+              return variation * dailyPattern - 0.01 * (H - 50);
+            };
+
+          case "pressure":
+            return (t, P) => {
+              const change = parseFloat(
+                document.getElementById("pressure-change").value
+              );
+              const semidiurnalTide =
+                Math.sin((4 * Math.PI * t) / 24) * 0.3 * factor;
+              return change + semidiurnalTide;
+            };
+
+          default:
+            return (t, y) => 0;
+        }
+      }
+
+      // Metode Runge-Kutta 4 untuk nilai awal
+      function rungeKutta4(f, t0, y0, h) {
+        const k1 = h * f(t0, y0);
+        const k2 = h * f(t0 + h / 2, y0 + k1 / 2);
+        const k3 = h * f(t0 + h / 2, y0 + k2 / 2);
+        const k4 = h * f(t0 + h, y0 + k3);
+
+        return y0 + (k1 + 2 * k2 + 2 * k3 + k4) / 6;
+      }
+
+      // Adams-Bashforth Methods
+      function adamsBashforth2(f, results, h) {
+        const [t1, y1] = results[results.length - 1];
+        const [t0, y0] = results[results.length - 2];
+
+        const f1 = f(t1, y1);
+        const f0 = f(t0, y0);
+
+        return y1 + (h * (3 * f1 - f0)) / 2;
+      }
+
+      function adamsBashforth4(f, results, h) {
+        const [t3, y3] = results[results.length - 1];
+        const [t2, y2] = results[results.length - 2];
+        const [t1, y1] = results[results.length - 3];
+        const [t0, y0] = results[results.length - 4];
+
+        const f3 = f(t3, y3);
+        const f2 = f(t2, y2);
+        const f1 = f(t1, y1);
+        const f0 = f(t0, y0);
+
+        return y3 + (h * (55 * f3 - 59 * f2 + 37 * f1 - 9 * f0)) / 24;
+      }
+
+      // Adams-Moulton Methods
+      function adamsMoulton2(f, t, yPredict, results, h) {
+        const [t1, y1] = results[results.length - 1];
+
+        const fPredict = f(t, yPredict);
+        const f1 = f(t1, y1);
+
+        return y1 + (h * (fPredict + f1)) / 2;
+      }
+
+      function adamsMoulton4(f, t, yPredict, results, h) {
+        const [t3, y3] = results[results.length - 1];
+        const [t2, y2] = results[results.length - 2];
+        const [t1, y1] = results[results.length - 3];
+
+        const fPredict = f(t, yPredict);
+        const f3 = f(t3, y3);
+        const f2 = f(t2, y2);
+        const f1 = f(t1, y1);
+
+        return y3 + (h * (9 * fPredict + 19 * f3 - 5 * f2 + f1)) / 24;
+      }
+
+      function calculateMethod(
+        methodType,
+        order,
+        f,
+        initialResults,
+        timeStep,
+        steps
+      ) {
+        const results = [...initialResults];
+        const startIndex = order === 2 ? 2 : 4;
+
+        for (let i = startIndex; i < steps; i++) {
+          const currentTime = i * timeStep;
+          let currentValue;
+
+          if (methodType === "ab") {
+            if (order === 2) {
+              currentValue = adamsBashforth2(f, results, timeStep);
+            } else {
+              currentValue = adamsBashforth4(f, results, timeStep);
+            }
+          } else {
+            // Adams-Moulton
+            let predictedValue;
+            if (order === 2) {
+              predictedValue = adamsBashforth2(f, results, timeStep);
+              currentValue = adamsMoulton2(
+                f,
+                currentTime,
+                predictedValue,
+                results,
+                timeStep
+              );
+            } else {
+              predictedValue = adamsBashforth4(f, results, timeStep);
+              currentValue = adamsMoulton4(
+                f,
+                currentTime,
+                predictedValue,
+                results,
+                timeStep
+              );
+            }
+          }
+
+          // Apply physical constraints
+          if (currentTab === "humidity") {
+            currentValue = Math.max(0, Math.min(100, currentValue));
+          } else if (currentTab === "temperature") {
+            currentValue = Math.max(-50, Math.min(60, currentValue));
+          } else if (currentTab === "pressure") {
+            currentValue = Math.max(950, Math.min(1050, currentValue));
+          }
+
+          results.push([currentTime, currentValue]);
+        }
+
+        return results.map((r) => r[1]);
+      }
+
+      function createChart(
+        canvasId,
+        timeValues,
+        methodResults,
+        label,
+        unit,
+        title
+      ) {
+        const ctx = document.getElementById(canvasId).getContext("2d");
+
+        // Destroy existing chart
+        if (canvasId === "weatherChart2" && chart2) {
+          chart2.destroy();
+        } else if (canvasId === "weatherChart4" && chart4) {
+          chart4.destroy();
+        }
+
+        const datasets = [];
+
+        // Add datasets for each method
+        Object.keys(methodResults).forEach((methodKey) => {
+          const method = methodColors[methodKey];
+          datasets.push({
+            label: method.name,
+            data: methodResults[methodKey],
+            borderColor: method.color,
+            backgroundColor: method.bg,
+            borderWidth: 2,
+            fill: false,
+            tension: 0.1,
+            pointRadius: 1,
+            pointHoverRadius: 4,
+          });
+        });
+
+        const chartConfig = {
+          type: "line",
+          data: {
+            labels: timeValues,
+            datasets: datasets,
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              title: {
+                display: true,
+                text: `${title} - ${label} (${unit})`,
+                font: {
+                  size: 16,
+                  weight: "bold",
+                },
+              },
+              legend: {
+                display: true,
+                position: "top",
+                labels: {
+                  usePointStyle: true,
+                  padding: 20,
+                },
+              },
+            },
+            scales: {
+              x: {
+                title: {
+                  display: true,
+                  text: "Waktu (jam)",
+                },
+                grid: {
+                  display: true,
+                  color: "rgba(0,0,0,0.1)",
+                },
+              },
+              y: {
+                title: {
+                  display: true,
+                  text: `${label} (${unit})`,
+                },
+                grid: {
+                  display: true,
+                  color: "rgba(0,0,0,0.1)",
+                },
+              },
+            },
+            interaction: {
+              intersect: false,
+              mode: "index",
+            },
+          },
+        };
+
+        const newChart = new Chart(ctx, chartConfig);
+
+        if (canvasId === "weatherChart2") {
+          chart2 = newChart;
+        } else if (canvasId === "weatherChart4") {
+          chart4 = newChart;
+        }
+
+        return newChart;
+      }
+
+      // Tambahkan fungsi-fungsi yang hilang ke dalam script yang sudah ada
+
+      // Fungsi untuk membuat legend
+      function createLegend(legendId, methodResults) {
+        const legendContainer = document.getElementById(legendId);
+        legendContainer.innerHTML = "";
+
+        Object.keys(methodResults).forEach((methodKey) => {
+          const method = methodColors[methodKey];
+          const legendItem = document.createElement("div");
+          legendItem.className = "legend-item";
+
+          legendItem.innerHTML = `
+            <div class="legend-color" style="background-color: ${method.color}"></div>
+            <span>${method.name}</span>
+        `;
+
+          legendContainer.appendChild(legendItem);
+        });
+      }
+
+      // Fungsi untuk menghitung akurasi (MAE - Mean Absolute Error)
+      function calculateAccuracy(method1, method2, referenceMethod) {
+        let mae = 0;
+        const len = Math.min(
+          method1.length,
+          method2.length,
+          referenceMethod.length
+        );
+
+        for (let i = 0; i < len; i++) {
+          mae += Math.abs(method1[i] - referenceMethod[i]);
+        }
+
+        return (mae / len).toFixed(4);
+      }
+
+      // Fungsi untuk menampilkan perbandingan akurasi
+      function displayAccuracyComparison(methodResults) {
+        const accuracyGrid = document.getElementById("accuracyGrid");
+        accuracyGrid.innerHTML = "";
+
+        // Gunakan Adams-Moulton Orde 4 sebagai referensi (paling akurat)
+        const reference = methodResults.am4;
+
+        const accuracies = {
+          "Adams-Bashforth Orde 2": calculateAccuracy(
+            methodResults.ab2,
+            reference,
+            reference
+          ),
+          "Adams-Moulton Orde 2": calculateAccuracy(
+            methodResults.am2,
+            reference,
+            reference
+          ),
+          "Adams-Bashforth Orde 4": calculateAccuracy(
+            methodResults.ab4,
+            reference,
+            reference
+          ),
+          "Adams-Moulton Orde 4": "0.0000", // Reference method
+        };
+
+        Object.entries(accuracies).forEach(([method, mae]) => {
+          const accuracyItem = document.createElement("div");
+          accuracyItem.className = "accuracy-item";
+          accuracyItem.innerHTML = `
+            <h4>${method}</h4>
+            <div class="value">MAE: ${mae}</div>
+        `;
+          accuracyGrid.appendChild(accuracyItem);
+        });
+      }
+
+      // Fungsi untuk mengupdate statistik
+      function updateWeatherStats(methodResults, timeValues) {
+        const allValues = Object.values(methodResults).flat();
+        const currentValues = Object.values(methodResults).map(
+          (arr) => arr[arr.length - 1]
+        );
+
+        const maxValue = Math.max(...allValues);
+        const minValue = Math.min(...allValues);
+        const currentValue = currentValues[currentValues.length - 1]; // AM4 as current
+
+        // Tentukan metode terbaik berdasarkan stabilitas
+        const bestMethod = "Adams-Moulton Orde 4";
+
+        let unit = "";
+        if (currentTab === "temperature") unit = "°C";
+        else if (currentTab === "humidity") unit = "%";
+        else if (currentTab === "pressure") unit = "hPa";
+
+        document.getElementById("currentValue").textContent =
+          currentValue.toFixed(2) + unit;
+        document.getElementById("maxValue").textContent =
+          maxValue.toFixed(2) + unit;
+        document.getElementById("minValue").textContent =
+          minValue.toFixed(2) + unit;
+        document.getElementById("bestMethod").textContent = bestMethod;
+      }
+
+      // Fungsi untuk membuat prediksi 5 hari
+      function createForecast(bestMethodResults, timeStep) {
+        const forecastGrid = document.getElementById("forecastGrid");
+        forecastGrid.innerHTML = "";
+
+        const daysToShow = 5;
+        const hoursPerDay = 24;
+        const startIndex = Math.max(
+          0,
+          bestMethodResults.length - (daysToShow * hoursPerDay) / timeStep
+        );
+
+        for (let day = 0; day < daysToShow; day++) {
+          const dayIndex = startIndex + (day * hoursPerDay) / timeStep;
+          if (dayIndex < bestMethodResults.length) {
+            const value = bestMethodResults[dayIndex];
+            const dayName = [
+              "Hari Ini",
+              "Besok",
+              "Lusa",
+              "Hari ke-4",
+              "Hari ke-5",
+            ][day];
+
+            let unit = "";
+            let description = "";
+
+            if (currentTab === "temperature") {
+              unit = "°C";
+              if (value < 20) description = "Dingin";
+              else if (value < 25) description = "Sejuk";
+              else if (value < 30) description = "Hangat";
+              else description = "Panas";
+            } else if (currentTab === "humidity") {
+              unit = "%";
+              if (value < 40) description = "Kering";
+              else if (value < 70) description = "Normal";
+              else description = "Lembab";
+            } else if (currentTab === "pressure") {
+              unit = "hPa";
+              if (value < 1010) description = "Rendah";
+              else if (value < 1020) description = "Normal";
+              else description = "Tinggi";
+            }
+
+            const forecastCard = document.createElement("div");
+            forecastCard.className = "forecast-card";
+            forecastCard.innerHTML = `
+                <div class="day">${dayName}</div>
+                <div class="temp">${value.toFixed(1)}${unit}</div>
+                <div class="desc">${description}</div>
+            `;
+
+            forecastGrid.appendChild(forecastCard);
+          }
+        }
+      }
+
+      // Fungsi utama untuk menjalankan prediksi cuaca
+      function runWeatherPrediction() {
+        // Show loading
+        document.getElementById("loading").classList.add("show");
+
+        setTimeout(() => {
+          try {
+            // Get input values
+            const location = document.getElementById("location").value;
+            const timeStep = parseFloat(
+              document.getElementById("time-step").value
+            );
+            const forecastHours = parseInt(
+              document.getElementById("forecast-hours").value
+            );
+            const steps = Math.ceil(forecastHours / timeStep);
+
+            // Get initial value based on current tab
+            let initialValue;
+            if (currentTab === "temperature") {
+              initialValue = parseFloat(
+                document.getElementById("temp-initial").value
+              );
+            } else if (currentTab === "humidity") {
+              initialValue = parseFloat(
+                document.getElementById("humid-initial").value
+              );
+            } else if (currentTab === "pressure") {
+              initialValue = parseFloat(
+                document.getElementById("pressure-initial").value
+              );
+            }
+
+            // Get weather equation
+            const weatherEquation = getWeatherEquation(currentTab, location);
+
+            // Generate initial values using Runge-Kutta 4
+            const initialResults = [[0, initialValue]];
+            for (let i = 1; i < 4; i++) {
+              const t = i * timeStep;
+              const y = rungeKutta4(
+                weatherEquation,
+                (i - 1) * timeStep,
+                initialResults[i - 1][1],
+                timeStep
+              );
+              initialResults.push([t, y]);
+            }
+
+            // Calculate results for all methods
+            const methodResults = {
+              ab2: calculateMethod(
+                "ab",
+                2,
+                weatherEquation,
+                initialResults,
+                timeStep,
+                steps
+              ),
+              am2: calculateMethod(
+                "am",
+                2,
+                weatherEquation,
+                initialResults,
+                timeStep,
+                steps
+              ),
+              ab4: calculateMethod(
+                "ab",
+                4,
+                weatherEquation,
+                initialResults,
+                timeStep,
+                steps
+              ),
+              am4: calculateMethod(
+                "am",
+                4,
+                weatherEquation,
+                initialResults,
+                timeStep,
+                steps
+              ),
+            };
+
+            // Generate time values
+            const timeValues = Array.from(
+              { length: steps },
+              (_, i) => i * timeStep
+            );
+
+            // Get labels and units
+            let label, unit;
+            if (currentTab === "temperature") {
+              label = "Suhu";
+              unit = "°C";
+            } else if (currentTab === "humidity") {
+              label = "Kelembaban";
+              unit = "%";
+            } else if (currentTab === "pressure") {
+              label = "Tekanan";
+              unit = "hPa";
+            }
+
+            // Create charts
+            const methodResults2 = {
+              ab2: methodResults.ab2,
+              am2: methodResults.am2,
+            };
+
+            const methodResults4 = {
+              ab4: methodResults.ab4,
+              am4: methodResults.am4,
+            };
+
+            createChart(
+              "weatherChart2",
+              timeValues,
+              methodResults2,
+              label,
+              unit,
+              "Perbandingan Metode Orde 2"
+            );
+            createChart(
+              "weatherChart4",
+              timeValues,
+              methodResults4,
+              label,
+              unit,
+              "Perbandingan Metode Orde 4"
+            );
+
+            // Create legends
+            createLegend("legend2", methodResults2);
+            createLegend("legend4", methodResults4);
+
+            // Display accuracy comparison
+            displayAccuracyComparison(methodResults);
+
+            // Update statistics
+            updateWeatherStats(methodResults, timeValues);
+
+            // Create forecast
+            createForecast(methodResults.am4, timeStep);
+
+            // Hide loading
+            document.getElementById("loading").classList.remove("show");
+          } catch (error) {
+            console.error("Error in weather prediction:", error);
+            document.getElementById("loading").classList.remove("show");
+            alert(
+              "Terjadi kesalahan dalam perhitungan. Silakan periksa input dan coba lagi."
+            );
+          }
+        }, 1000);
+      }
+
+      // Initialize the application
+      document.addEventListener("DOMContentLoaded", function () {
+        updateLocationDefaults();
+      });
+    </script>
+  </body>
+</html>

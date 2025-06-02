@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Deteksi Kesopanan Chat - Naive Bayes</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 700px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 2rem;
+        margin-bottom: 10px;
+      }
+
+      .header p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+      }
+
+      .content {
+        padding: 30px;
+      }
+
+      .input-section {
+        margin-bottom: 30px;
+      }
+
+      .input-section h2 {
+        color: #333;
+        margin-bottom: 15px;
+        font-size: 1.4rem;
+      }
+
+      #textInput {
+        width: 100%;
+        height: 100px;
+        padding: 15px;
+        border: 2px solid #ddd;
+        border-radius: 10px;
+        font-size: 16px;
+        resize: vertical;
+        margin-bottom: 15px;
+        font-family: inherit;
+      }
+
+      #textInput:focus {
+        outline: none;
+        border-color: #4facfe;
+        box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+      }
+
+      #analyzeBtn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 25px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      #analyzeBtn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+      }
+
+      .result {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 15px;
+        margin-bottom: 20px;
+        display: none;
+        border-left: 5px solid #4facfe;
+      }
+
+      .prediction {
+        font-size: 1.5rem;
+        font-weight: bold;
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        margin-bottom: 15px;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      }
+
+      .sopan {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+      }
+
+      .tidak-sopan {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+        color: white;
+      }
+
+      .confidence {
+        text-align: center;
+        font-size: 1.1rem;
+        color: #666;
+        margin-bottom: 20px;
+        font-weight: 500;
+      }
+
+      .probability-details {
+        background: #e9ecef;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        font-size: 0.9rem;
+      }
+
+      .feedback {
+        text-align: center;
+      }
+
+      .feedback h4 {
+        margin-bottom: 15px;
+        color: #333;
+        font-size: 1.1rem;
+      }
+
+      .feedback-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+      }
+
+      .feedback-btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .feedback-btn:hover {
+        transform: translateY(-2px);
+      }
+
+      .correct {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+      }
+
+      .correct:hover {
+        box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+      }
+
+      .wrong {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+        color: white;
+      }
+
+      .wrong:hover {
+        box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-top: 30px;
+      }
+
+      .stat-card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+      }
+
+      .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+      }
+
+      .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #667eea;
+        margin-bottom: 5px;
+      }
+
+      .stat-label {
+        color: #666;
+        margin-top: 5px;
+        font-size: 0.9rem;
+      }
+
+      .message {
+        padding: 15px;
+        margin: 15px 0;
+        border-radius: 10px;
+        text-align: center;
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        display: none;
+        animation: slideIn 0.3s ease;
+        font-weight: 500;
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateY(-20px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      /* Responsive Design */
+      @media (max-width: 768px) {
+        .container {
+          margin: 10px;
+          border-radius: 15px;
+        }
+
+        .header {
+          padding: 25px 20px;
+        }
+
+        .header h1 {
+          font-size: 1.8rem;
+        }
+
+        .content {
+          padding: 20px;
+        }
+
+        .feedback-buttons {
+          flex-direction: column;
+          align-items: center;
+        }
+
+        .stats {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .stats {
+          grid-template-columns: 1fr;
+        }
+
+        .header h1 {
+          font-size: 1.6rem;
+        }
+
+        .header p {
+          font-size: 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🤖 AI Deteksi Kesopanan (Naive Bayes)</h1>
+        <p>Sistem machine learning untuk menganalisis kesopanan teks</p>
+      </div>
+      <div class="content">
+        <!-- Input Section -->
+        <div class="input-section">
+          <h2>📝 Masukkan Teks</h2>
+          <textarea
+            id="textInput"
+            placeholder="Ketik kalimat yang ingin dianalisis..."
+          ></textarea>
+          <button id="analyzeBtn">Analisis dengan Naive Bayes</button>
+        </div>
+        <!-- Result Section -->
+        <div class="result" id="result">
+          <div class="prediction" id="prediction"></div>
+          <div class="confidence" id="confidence"></div>
+          <div class="probability-details" id="probabilityDetails"></div>
+
+          <div class="feedback">
+            <h4>Apakah hasil ini benar?</h4>
+            <div class="feedback-buttons">
+              <button class="feedback-btn correct" id="correctBtn">
+                ✅ Benar
+              </button>
+              <button class="feedback-btn wrong" id="wrongBtn">❌ Salah</button>
+            </div>
+          </div>
+        </div>
+        <!-- Message -->
+        <div class="message" id="message"></div>
+        <!-- Stats -->
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-number" id="totalVocab">0</div>
+            <div class="stat-label">Total Vocabulary</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="accuracy">0%</div>
+            <div class="stat-label">Akurasi</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="sopanDocs">0</div>
+            <div class="stat-label">Dokumen Sopan</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="tidakSopanDocs">0</div>
+            <div class="stat-label">Dokumen Tidak Sopan</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Implementasi Naive Bayes Classifier untuk Deteksi Kesopanan
+      class NaiveBayesPolitenessClassifier {
+        constructor() {
+          // Training data awal
+          this.trainingDocs = {
+            sopan: [
+              "terima kasih atas bantuannya",
+              "mohon maaf mengganggu",
+              "selamat pagi semua",
+              "tolong bantu saya",
+              "permisi boleh bertanya",
+              "dengan hormat",
+              "silakan masuk",
+              "bagus sekali pekerjaannya",
+              "mohon tunggu sebentar",
+              "terima kasih banyak",
+            ],
+            tidakSopan: [
+              "kamu bodoh sekali",
+              "dasar goblok",
+              "jangan berisik",
+              "sialan banget",
+              "tolol ga ngerti",
+              "bangsat lo",
+              "bego amat",
+              "kampret deh",
+              "tai kucing",
+              "anjing lu",
+            ],
+          };
+
+          // Vocabulary dan word counts
+          this.vocabulary = new Set();
+          this.wordCounts = {
+            sopan: {},
+            tidakSopan: {},
+          };
+          this.docCounts = {
+            sopan: this.trainingDocs.sopan.length,
+            tidakSopan: this.trainingDocs.tidakSopan.length,
+          };
+          this.totalWords = {
+            sopan: 0,
+            tidakSopan: 0,
+          };
+
+          // Statistics
+          this.stats = {
+            totalPredictions: 0,
+            correctPredictions: 0,
+          };
+
+          // Current prediction
+          this.currentText = "";
+          this.currentPrediction = "";
+
+          // Train initial model
+          this.trainModel();
+        }
+
+        // Preprocessing teks
+        preprocessText(text) {
+          return text
+            .toLowerCase()
+            .replace(/[^\w\s]/g, " ")
+            .split(/\s+/)
+            .filter((word) => word.length > 2);
+        }
+
+        // Train model dengan data yang ada
+        trainModel() {
+          // Reset counts
+          this.vocabulary.clear();
+          this.wordCounts = { sopan: {}, tidakSopan: {} };
+          this.totalWords = { sopan: 0, tidakSopan: 0 };
+
+          // Process setiap kategori
+          for (let category of ["sopan", "tidakSopan"]) {
+            for (let doc of this.trainingDocs[category]) {
+              const words = this.preprocessText(doc);
+
+              for (let word of words) {
+                // Tambah ke vocabulary
+                this.vocabulary.add(word);
+
+                // Count words
+                if (!this.wordCounts[category][word]) {
+                  this.wordCounts[category][word] = 0;
+                }
+                this.wordCounts[category][word]++;
+                this.totalWords[category]++;
+              }
+            }
+          }
+        }
+
+        // Hitung P(word|class) dengan Laplace smoothing
+        getWordProbability(word, category) {
+          const wordCount = this.wordCounts[category][word] || 0;
+          const totalWords = this.totalWords[category];
+          const vocabularySize = this.vocabulary.size;
+
+          // Laplace smoothing: (word_count + 1) / (total_words + vocabulary_size)
+          return (wordCount + 1) / (totalWords + vocabularySize);
+        }
+
+        // Hitung P(class)
+        getClassProbability(category) {
+          const totalDocs = this.docCounts.sopan + this.docCounts.tidakSopan;
+          return this.docCounts[category] / totalDocs;
+        }
+
+        // Prediksi menggunakan Naive Bayes
+        predict(text) {
+          const words = this.preprocessText(text);
+
+          // Hitung log probability untuk setiap class
+          let logProbSopan = Math.log(this.getClassProbability("sopan"));
+          let logProbTidakSopan = Math.log(
+            this.getClassProbability("tidakSopan")
+          );
+
+          // Detail perhitungan untuk debugging
+          let details = {
+            words: words,
+            priorSopan: this.getClassProbability("sopan"),
+            priorTidakSopan: this.getClassProbability("tidakSopan"),
+            wordProbs: {},
+          };
+
+          for (let word of words) {
+            const probSopan = this.getWordProbability(word, "sopan");
+            const probTidakSopan = this.getWordProbability(word, "tidakSopan");
+
+            logProbSopan += Math.log(probSopan);
+            logProbTidakSopan += Math.log(probTidakSopan);
+
+            details.wordProbs[word] = {
+              sopan: probSopan,
+              tidakSopan: probTidakSopan,
+            };
+          }
+
+          // Convert kembali ke probability (tidak log)
+          const probSopan = Math.exp(logProbSopan);
+          const probTidakSopan = Math.exp(logProbTidakSopan);
+
+          // Normalisasi
+          const totalProb = probSopan + probTidakSopan;
+          const normalizedProbSopan = probSopan / totalProb;
+          const normalizedProbTidakSopan = probTidakSopan / totalProb;
+
+          // Tentukan prediksi
+          const prediction =
+            normalizedProbSopan > normalizedProbTidakSopan
+              ? "sopan"
+              : "tidak sopan";
+          const confidence =
+            Math.max(normalizedProbSopan, normalizedProbTidakSopan) * 100;
+
+          return {
+            prediction: prediction,
+            confidence: Math.round(confidence),
+            probabilities: {
+              sopan: Math.round(normalizedProbSopan * 100),
+              tidakSopan: Math.round(normalizedProbTidakSopan * 100),
+            },
+            details: details,
+          };
+        }
+
+        // Tambah training data baru
+        addTrainingData(text, label) {
+          this.trainingDocs[label].push(text);
+          this.docCounts[label]++;
+          this.trainModel(); // Re-train model
+        }
+
+        // Update feedback
+        updateFeedback(isCorrect) {
+          this.stats.totalPredictions++;
+          if (isCorrect) {
+            this.stats.correctPredictions++;
+          }
+        }
+
+        // Get statistics
+        getStats() {
+          const accuracy =
+            this.stats.totalPredictions > 0
+              ? Math.round(
+                  (this.stats.correctPredictions /
+                    this.stats.totalPredictions) *
+                    100
+                )
+              : 0;
+
+          return {
+            totalVocabulary: this.vocabulary.size,
+            accuracy: accuracy,
+            sopanDocs: this.docCounts.sopan,
+            tidakSopanDocs: this.docCounts.tidakSopan,
+          };
+        }
+      }
+
+      // Initialize classifier
+      const classifier = new NaiveBayesPolitenessClassifier();
+
+      // UI Functions
+      function showResult(result) {
+        const predictionEl = document.getElementById("prediction");
+        const confidenceEl = document.getElementById("confidence");
+        const probabilityDetailsEl =
+          document.getElementById("probabilityDetails");
+        const resultEl = document.getElementById("result");
+
+        // Update tampilan prediksi
+        predictionEl.textContent = result.prediction.toUpperCase();
+        predictionEl.className = `prediction ${result.prediction.replace(
+          " ",
+          "-"
+        )}`;
+
+        // Update confidence
+        confidenceEl.textContent = `Keyakinan: ${result.confidence}%`;
+
+        // Update probability details
+        probabilityDetailsEl.innerHTML = `
+                <strong>Detail Probabilitas Naive Bayes:</strong><br>
+                • P(Sopan) = ${result.probabilities.sopan}%<br>
+                • P(Tidak Sopan) = ${result.probabilities.tidakSopan}%<br>
+                <em>Kata yang dianalisis: ${result.details.words.join(
+                  ", "
+                )}</em>
+            `;
+
+        // Tampilkan section hasil
+        resultEl.style.display = "block";
+
+        // Update statistik
+        updateStats();
+
+        // Scroll ke hasil
+        resultEl.scrollIntoView({ behavior: "smooth" });
+      }
+
+      function updateStats() {
+        const stats = classifier.getStats();
+        document.getElementById("totalVocab").textContent =
+          stats.totalVocabulary;
+        document.getElementById("accuracy").textContent = stats.accuracy + "%";
+        document.getElementById("sopanDocs").textContent = stats.sopanDocs;
+        document.getElementById("tidakSopanDocs").textContent =
+          stats.tidakSopanDocs;
+      }
+
+      function showMessage(text) {
+        const messageEl = document.getElementById("message");
+        messageEl.textContent = text;
+        messageEl.style.display = "block";
+
+        setTimeout(() => {
+          messageEl.style.display = "none";
+        }, 3000);
+      }
+
+      // Event handlers
+      function handleAnalyze() {
+        const text = document.getElementById("textInput").value.trim();
+
+        if (!text) {
+          alert("Silakan masukkan teks terlebih dahulu!");
+          return;
+        }
+
+        classifier.currentText = text;
+        const result = classifier.predict(text);
+        classifier.currentPrediction = result.prediction;
+
+        showResult(result);
+      }
+
+      function handleCorrectFeedback() {
+        classifier.updateFeedback(true);
+        classifier.addTrainingData(
+          classifier.currentText,
+          classifier.currentPrediction
+        );
+        showMessage("✅ Terima kasih! Model Naive Bayes telah diperbarui.");
+        updateStats();
+      }
+
+      function handleWrongFeedback() {
+        classifier.updateFeedback(false);
+        const correctLabel =
+          classifier.currentPrediction === "sopan" ? "tidakSopan" : "sopan";
+        classifier.addTrainingData(classifier.currentText, correctLabel);
+        showMessage("🔧 Terima kasih! Model Naive Bayes telah diperbaiki.");
+        updateStats();
+      }
+
+      // Initialize app
+      function initializeApp() {
+        document
+          .getElementById("analyzeBtn")
+          .addEventListener("click", handleAnalyze);
+        document
+          .getElementById("correctBtn")
+          .addEventListener("click", handleCorrectFeedback);
+        document
+          .getElementById("wrongBtn")
+          .addEventListener("click", handleWrongFeedback);
+
+        document
+          .getElementById("textInput")
+          .addEventListener("keypress", (e) => {
+            if (e.key === "Enter" && e.ctrlKey) {
+              handleAnalyze();
+            }
+          });
+
+        updateStats();
+      }
+
+      // Start app when DOM loaded
+      document.addEventListener("DOMContentLoaded", initializeApp);
+    </script>
+  </body>
+</html>

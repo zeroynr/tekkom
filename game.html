@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Tic-Tac-Toe dengan Q-Learning</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+      }
+
+      .container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        max-width: 800px;
+        width: 100%;
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 1rem;
+        font-size: 2.5rem;
+        background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .subtitle {
+        text-align: center;
+        margin-bottom: 2rem;
+        opacity: 0.8;
+        font-size: 1.1rem;
+      }
+
+      .game-area {
+        display: flex;
+        gap: 2rem;
+        align-items: flex-start;
+      }
+
+      .game-board {
+        flex: 1;
+      }
+
+      .board {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 15px;
+        margin-bottom: 1rem;
+      }
+
+      .cell {
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        border-radius: 10px;
+        font-size: 2rem;
+        font-weight: bold;
+        color: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .cell:hover:empty {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.05);
+      }
+
+      .cell.x {
+        color: #ff6b6b;
+        text-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+      }
+
+      .cell.o {
+        color: #4ecdc4;
+        text-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
+      }
+
+      .controls {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+      }
+
+      button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 25px;
+        background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        flex: 1;
+        min-width: 120px;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .info-panel {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 15px;
+        padding: 1.5rem;
+      }
+
+      .stats {
+        margin-bottom: 1.5rem;
+      }
+
+      .stat-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .learning-progress {
+        margin-bottom: 1.5rem;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 20px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #ff6b6b, #4ecdc4);
+        border-radius: 10px;
+        transition: width 0.3s ease;
+      }
+
+      .status {
+        text-align: center;
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin-bottom: 1rem;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+      }
+
+      .explanation {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        padding: 1rem;
+        margin-top: 1rem;
+        border-left: 4px solid #4ecdc4;
+      }
+
+      .explanation h3 {
+        margin-bottom: 0.5rem;
+        color: #4ecdc4;
+      }
+
+      .explanation p {
+        font-size: 0.9rem;
+        line-height: 1.4;
+        opacity: 0.9;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      .thinking {
+        animation: pulse 1s infinite;
+      }
+
+      @media (max-width: 768px) {
+        .game-area {
+          flex-direction: column;
+        }
+
+        .cell {
+          width: 60px;
+          height: 60px;
+          font-size: 1.5rem;
+        }
+
+        h1 {
+          font-size: 2rem;
+        }
+
+        .controls {
+          justify-content: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🤖 AI Tic-Tac-Toe</h1>
+      <div class="subtitle">
+        AI belajar menggunakan Q-Learning Reinforcement Learning
+      </div>
+
+      <div class="game-area">
+        <div class="game-board">
+          <div class="status" id="status">Mulai permainan baru!</div>
+
+          <div class="board" id="board">
+            <button class="cell" data-index="0"></button>
+            <button class="cell" data-index="1"></button>
+            <button class="cell" data-index="2"></button>
+            <button class="cell" data-index="3"></button>
+            <button class="cell" data-index="4"></button>
+            <button class="cell" data-index="5"></button>
+            <button class="cell" data-index="6"></button>
+            <button class="cell" data-index="7"></button>
+            <button class="cell" data-index="8"></button>
+          </div>
+
+          <div class="controls">
+            <button onclick="startNewGame()">🎮 Game Baru</button>
+            <button onclick="trainAI()">🧠 Latih AI (100x)</button>
+            <button onclick="resetAI()">🔄 Reset AI</button>
+          </div>
+        </div>
+
+        <div class="info-panel">
+          <div class="stats">
+            <h3>📊 Statistik</h3>
+            <div class="stat-item">
+              <span>Kemenangan Player:</span>
+              <span id="playerWins">0</span>
+            </div>
+            <div class="stat-item">
+              <span>Kemenangan AI:</span>
+              <span id="aiWins">0</span>
+            </div>
+            <div class="stat-item">
+              <span>Seri:</span>
+              <span id="draws">0</span>
+            </div>
+            <div class="stat-item">
+              <span>Total Game:</span>
+              <span id="totalGames">0</span>
+            </div>
+          </div>
+
+          <div class="learning-progress">
+            <h3>🎯 Progress Pembelajaran</h3>
+            <div>Pengalaman: <span id="experience">0</span> game</div>
+            <div class="progress-bar">
+              <div
+                class="progress-fill"
+                id="progressFill"
+                style="width: 0%"
+              ></div>
+            </div>
+            <div style="font-size: 0.8rem; margin-top: 0.5rem; opacity: 0.7">
+              Epsilon (Eksplorasi): <span id="epsilon">100%</span>
+            </div>
+          </div>
+
+          <div class="explanation">
+            <h3>🧠 Cara Kerja AI</h3>
+            <p>
+              <strong>Q-Learning:</strong> AI mempelajari nilai setiap aksi
+              dalam setiap situasi. Setiap kali bermain, AI memperbarui
+              pengetahuannya berdasarkan hasil yang didapat.
+            </p>
+            <br />
+            <p>
+              <strong>Eksplorasi vs Eksploitasi:</strong> AI mulai dengan
+              gerakan acak (eksplorasi) untuk belajar, kemudian berangsur
+              menggunakan strategi terbaik (eksploitasi).
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      class QLearningTicTacToe {
+        constructor() {
+          this.qTable = new Map(); // State-Action value table
+          this.learningRate = 0.1;
+          this.discountFactor = 0.9;
+          this.epsilon = 1.0; // Exploration rate
+          this.epsilonDecay = 0.995;
+          this.minEpsilon = 0.1;
+          this.experience = 0;
+
+          // Game state
+          this.board = Array(9).fill("");
+          this.currentPlayer = "X"; // X = Player, O = AI
+          this.gameOver = false;
+          this.winner = null;
+
+          // Statistics
+          this.stats = {
+            playerWins: 0,
+            aiWins: 0,
+            draws: 0,
+            totalGames: 0,
+          };
+
+          this.initializeEventListeners();
+          this.updateDisplay();
+        }
+
+        initializeEventListeners() {
+          const cells = document.querySelectorAll(".cell");
+          cells.forEach((cell) => {
+            cell.addEventListener("click", (e) => {
+              const index = parseInt(e.target.dataset.index);
+              this.makeMove(index);
+            });
+          });
+        }
+
+        // Convert board state to string key for Q-table
+        getBoardState() {
+          return this.board.join("");
+        }
+
+        // Get available moves
+        getAvailableMoves() {
+          return this.board
+            .map((cell, index) => (cell === "" ? index : -1))
+            .filter((index) => index !== -1);
+        }
+
+        // Get Q-value for a state-action pair
+        getQValue(state, action) {
+          const key = `${state}_${action}`;
+          return this.qTable.get(key) || 0;
+        }
+
+        // Set Q-value for a state-action pair
+        setQValue(state, action, value) {
+          const key = `${state}_${action}`;
+          this.qTable.set(key, value);
+        }
+
+        // Choose action using epsilon-greedy strategy
+        chooseAction(availableMoves) {
+          if (Math.random() < this.epsilon) {
+            // Exploration: random move
+            return availableMoves[
+              Math.floor(Math.random() * availableMoves.length)
+            ];
+          } else {
+            // Exploitation: best known move
+            const state = this.getBoardState();
+            let bestAction = availableMoves[0];
+            let bestValue = this.getQValue(state, bestAction);
+
+            for (let action of availableMoves) {
+              const value = this.getQValue(state, action);
+              if (value > bestValue) {
+                bestValue = value;
+                bestAction = action;
+              }
+            }
+            return bestAction;
+          }
+        }
+
+        // Update Q-value using Q-learning formula
+        updateQValue(state, action, reward, nextState) {
+          const currentQ = this.getQValue(state, action);
+          const nextMoves = this.getAvailableMoves();
+
+          let maxNextQ = 0;
+          if (nextMoves.length > 0 && !this.gameOver) {
+            maxNextQ = Math.max(
+              ...nextMoves.map((move) => this.getQValue(nextState, move))
+            );
+          }
+
+          const newQ =
+            currentQ +
+            this.learningRate *
+              (reward + this.discountFactor * maxNextQ - currentQ);
+          this.setQValue(state, action, newQ);
+        }
+
+        // Check for winner
+        checkWinner() {
+          const winPatterns = [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8], // Rows
+            [0, 3, 6],
+            [1, 4, 7],
+            [2, 5, 8], // Columns
+            [0, 4, 8],
+            [2, 4, 6], // Diagonals
+          ];
+
+          for (let pattern of winPatterns) {
+            const [a, b, c] = pattern;
+            if (
+              this.board[a] &&
+              this.board[a] === this.board[b] &&
+              this.board[a] === this.board[c]
+            ) {
+              return this.board[a];
+            }
+          }
+
+          return this.board.includes("") ? null : "draw";
+        }
+
+        // Calculate reward based on game outcome
+        getReward(winner) {
+          if (winner === "O") return 1; // AI wins
+          if (winner === "X") return -1; // Player wins
+          return 0; // Draw or game continues
+        }
+
+        // Make a move
+        makeMove(index) {
+          if (this.board[index] !== "" || this.gameOver) return false;
+
+          const previousState = this.getBoardState();
+          this.board[index] = this.currentPlayer;
+
+          const winner = this.checkWinner();
+          if (winner) {
+            this.gameOver = true;
+            this.winner = winner;
+            this.updateStats();
+
+            // Learn from the final move if it's AI's move
+            if (this.currentPlayer === "O") {
+              const reward = this.getReward(winner);
+              this.updateQValue(
+                previousState,
+                index,
+                reward,
+                this.getBoardState()
+              );
+              this.experience++;
+            }
+          } else {
+            this.currentPlayer = this.currentPlayer === "X" ? "O" : "X";
+
+            // If it's AI's turn and game is not over
+            if (this.currentPlayer === "O" && !this.gameOver) {
+              setTimeout(() => this.makeAIMove(), 500);
+            }
+          }
+
+          this.updateDisplay();
+          return true;
+        }
+
+        // AI makes a move
+        makeAIMove() {
+          if (this.gameOver) return;
+
+          const availableMoves = this.getAvailableMoves();
+          if (availableMoves.length === 0) return;
+
+          const previousState = this.getBoardState();
+          const action = this.chooseAction(availableMoves);
+
+          this.board[action] = "O";
+
+          const winner = this.checkWinner();
+          if (winner) {
+            this.gameOver = true;
+            this.winner = winner;
+            this.updateStats();
+          }
+
+          // Learn from this move
+          const reward = this.getReward(winner);
+          this.updateQValue(
+            previousState,
+            action,
+            reward,
+            this.getBoardState()
+          );
+          this.experience++;
+
+          // Decay epsilon (reduce exploration over time)
+          this.epsilon = Math.max(
+            this.minEpsilon,
+            this.epsilon * this.epsilonDecay
+          );
+
+          this.currentPlayer = "X";
+          this.updateDisplay();
+        }
+
+        // Update game statistics
+        updateStats() {
+          this.stats.totalGames++;
+          if (this.winner === "X") this.stats.playerWins++;
+          else if (this.winner === "O") this.stats.aiWins++;
+          else if (this.winner === "draw") this.stats.draws++;
+        }
+
+        // Start a new game
+        startNewGame() {
+          this.board = Array(9).fill("");
+          this.currentPlayer = "X";
+          this.gameOver = false;
+          this.winner = null;
+          this.updateDisplay();
+        }
+
+        // Train AI by playing games against itself
+        async trainAI() {
+          const trainingGames = 100;
+          const originalEpsilon = this.epsilon;
+
+          document.getElementById(
+            "status"
+          ).textContent = `🧠 Melatih AI... (0/${trainingGames})`;
+
+          for (let game = 0; game < trainingGames; game++) {
+            // Reset board for training
+            this.board = Array(9).fill("");
+            this.gameOver = false;
+            this.winner = null;
+            this.currentPlayer = Math.random() < 0.5 ? "X" : "O"; // Random starting player
+
+            // Play a complete game
+            while (!this.gameOver) {
+              const availableMoves = this.getAvailableMoves();
+              if (availableMoves.length === 0) break;
+
+              const previousState = this.getBoardState();
+              const action = this.chooseAction(availableMoves);
+
+              this.board[action] = this.currentPlayer;
+
+              const winner = this.checkWinner();
+              if (winner) {
+                this.gameOver = true;
+                this.winner = winner;
+                this.updateStats();
+              }
+
+              // Learn from move
+              const reward = this.getReward(winner);
+              this.updateQValue(
+                previousState,
+                action,
+                reward,
+                this.getBoardState()
+              );
+              this.experience++;
+
+              this.currentPlayer = this.currentPlayer === "X" ? "O" : "X";
+            }
+
+            // Decay epsilon
+            this.epsilon = Math.max(
+              this.minEpsilon,
+              this.epsilon * this.epsilonDecay
+            );
+
+            // Update progress periodically
+            if (game % 10 === 0) {
+              document.getElementById(
+                "status"
+              ).textContent = `🧠 Melatih AI... (${game}/${trainingGames})`;
+              await new Promise((resolve) => setTimeout(resolve, 10));
+            }
+          }
+
+          this.startNewGame();
+          this.updateDisplay();
+        }
+
+        // Reset AI learning
+        resetAI() {
+          this.qTable.clear();
+          this.epsilon = 1.0;
+          this.experience = 0;
+          this.stats = {
+            playerWins: 0,
+            aiWins: 0,
+            draws: 0,
+            totalGames: 0,
+          };
+          this.startNewGame();
+          this.updateDisplay();
+        }
+
+        // Update display
+        updateDisplay() {
+          // Update board
+          const cells = document.querySelectorAll(".cell");
+          cells.forEach((cell, index) => {
+            cell.textContent = this.board[index];
+            cell.className = "cell";
+            if (this.board[index] === "X") cell.classList.add("x");
+            if (this.board[index] === "O") cell.classList.add("o");
+          });
+
+          // Update status
+          const status = document.getElementById("status");
+          if (this.gameOver) {
+            if (this.winner === "X") {
+              status.textContent = "🎉 Anda Menang!";
+              status.style.background = "rgba(255, 107, 107, 0.3)";
+            } else if (this.winner === "O") {
+              status.textContent = "🤖 AI Menang!";
+              status.style.background = "rgba(78, 205, 196, 0.3)";
+            } else {
+              status.textContent = "🤝 Seri!";
+              status.style.background = "rgba(255, 255, 255, 0.2)";
+            }
+          } else {
+            if (this.currentPlayer === "X") {
+              status.textContent = "🎮 Giliran Anda";
+              status.style.background = "rgba(255, 107, 107, 0.2)";
+            } else {
+              status.textContent = "🤖 AI Sedang Berpikir...";
+              status.style.background = "rgba(78, 205, 196, 0.2)";
+              status.classList.add("thinking");
+              setTimeout(() => status.classList.remove("thinking"), 1000);
+            }
+          }
+
+          // Update statistics
+          document.getElementById("playerWins").textContent =
+            this.stats.playerWins;
+          document.getElementById("aiWins").textContent = this.stats.aiWins;
+          document.getElementById("draws").textContent = this.stats.draws;
+          document.getElementById("totalGames").textContent =
+            this.stats.totalGames;
+
+          // Update learning progress
+          document.getElementById("experience").textContent = this.experience;
+          document.getElementById("epsilon").textContent =
+            Math.round(this.epsilon * 100) + "%";
+
+          const progress = Math.min(100, (this.experience / 1000) * 100);
+          document.getElementById("progressFill").style.width = progress + "%";
+        }
+      }
+
+      // Initialize game
+      const game = new QLearningTicTacToe();
+
+      // Global functions for buttons
+      function startNewGame() {
+        game.startNewGame();
+      }
+
+      function trainAI() {
+        game.trainAI();
+      }
+
+      function resetAI() {
+        game.resetAI();
+      }
+    </script>
+  </body>
+</html>
